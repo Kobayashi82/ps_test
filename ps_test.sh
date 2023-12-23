@@ -12,11 +12,27 @@ NC="\033[0m"
 pname="PUSH SWAP"
 puser="VZURERA-"
 
-start=$(date +%s%N)
 clear
-if [ -f "./checker.c" ]; then make bonus; else make; fi
-printf "\n$YELLOW\t$pname\t\t\t$MAGENTA $puser\n$NC"
-printf "$YELLOW───────────────────────────────────────────────────────────────$CYAN\n\n"
+checker=./checker_Mac
+
+if [ ! -f $checker ]; then
+	if [ -f "./checker_linux" ]; then checker=./checker_linux;
+		printf "\n$YELLOW\t$pname\t\t\t$MAGENTA $puser\n$NC"
+	else
+		if [ -f "./checker" ]; then
+			printf "\n$RED checker not found, using bonus checker\n"
+    		checker=./checker
+			printf "\n$YELLOW\t$pname - (Bonus Checker)\t$MAGENTA $puser\n$NC"
+		else
+			printf "\n$RED checker not found\n\n"
+			exit
+		fi
+	fi
+else
+	printf "\n$YELLOW\t$pname\t\t\t$MAGENTA $puser\n$NC"
+fi
+
+printf "${YELLOW}───────────────────────────────────────────────────────────────$CYAN\n\n"
 
 norma=$(norminette .)
 if [[ $norma == *"Error"* ]]; then
@@ -24,15 +40,6 @@ if [[ $norma == *"Error"* ]]; then
 else
     printf " Norminette: $GREEN\tOK$NC\n"
 fi
-
-if [ ! -f "./checker_linux" ]; then
-	printf "\n$RED checker_linux not found\n"
-	if [ -f "./checker" ]; then
-    	./ps_bonus_test.sh --std
-	fi
-	exit 1
-fi
-
 printf "$NC\n"
 printf " Error test:\t"
 result=$(./push_swap "" 2>&1)
@@ -49,23 +56,29 @@ if [ "$result" = "Error" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; 
 numbers=(0 1 2 d 3)
 result=$(./push_swap "${numbers[@]}" 2>&1)
 if [ "$result" = "Error" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
+numbers=(0 1-2 3)
+result=$(./push_swap "${numbers[@]}" 2>&1)
+if [ "$result" = "Error" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
+numbers=(0 1+2 3)
+result=$(./push_swap "${numbers[@]}" 2>&1)
+if [ "$result" = "Error" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 printf "$NC\n"
 
 printf " Input test:\t"
 numbers=42
-result=$(./push_swap $numbers | ./checker_linux $numbers)
+result=$(./push_swap $numbers | $checker $numbers)
 if [ "$result" = "OK" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 numbers=(2 3)
-result=$(./push_swap $numbers | ./checker_linux $numbers)
+result=$(./push_swap $numbers | $checker $numbers)
 if [ "$result" = "OK" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 numbers=(0 1 2 3)
-result=$(./push_swap $numbers | ./checker_linux $numbers)
+result=$(./push_swap $numbers | $checker $numbers)
 if [ "$result" = "OK" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 numbers=("0 2 1" 3 "4 5 6" 7 "8")
-result=$(./push_swap "${numbers[@]}" | ./checker_linux "${numbers[@]}")
+result=$(./push_swap "${numbers[@]}" | $checker "${numbers[@]}")
 if [ "$result" = "OK" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 numbers=(-2147483648 2147483647)
-result=$(./push_swap "${numbers[@]}" | ./checker_linux $numbers)
+result=$(./push_swap "${numbers[@]}" | $checker $numbers)
 if [ "$result" = "OK" ]; then printf "${GREEN}OK "; else printf "${RED}KO "; fi
 printf "$NC\n"
 
@@ -73,8 +86,8 @@ printf "$NC\n"
 for i in {1..3}
 do
 	printf "  3 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 3)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
+	numbers=$(jot 3 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 	if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; else printf "$RED\tFAILURE $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; fi
 done
 
@@ -83,9 +96,10 @@ points=2
 for i in {1..3}
 do
 	printf "  5 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 5)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
-
+	numbers=$(jot 5 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
+	# if [ "$lines" -gt 5 ]; then printf "\t$numbers - "; fi
+	# printf "\t$numbers - "
 	if [ "$result" = "OK" -a "$lines" -lt 13 ]; then
 		printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC"
 		if [ "$lines" -lt 9 ] && [ "$points" -ge 1 ]; then points=1;
@@ -101,8 +115,8 @@ printf "$NC\n"
 for i in {1..3}
 do
 	printf "  10 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 10)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
+	numbers=$(jot 10 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 	if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; else printf "$RED\tFAILURE $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; fi
 done
 
@@ -110,8 +124,8 @@ printf "\n"
 for i in {1..3}
 do
 	printf "  50 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 50)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
+	numbers=$(jot 50 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 	if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; else printf "$RED\tFAILURE $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; fi
 done
 
@@ -120,9 +134,8 @@ points=6
 for i in {1..3}
 do
 	printf " 100 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 100)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
-	
+	numbers=$(jot 100 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 	if [ "$result" = "OK" -a "$lines" -lt 1500 ]; then
 		printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC"
 		if [ "$lines" -lt 700 ] && [ "$points" -ge 5 ]; then points=5;
@@ -143,9 +156,9 @@ printf "$NC\n"
 for i in {1..3}
 do
 	printf " 250 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 250)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
-	if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; else printf "$RED\tFAILURE $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; fi
+	numbers=$(jot 250 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
+	if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS ${MAGENTA}(${YELLOW}${lines}${MAGENTA})$NC\n"; else printf "$RED\tFAILURE ${MAGENTA}(${YELLOW}${lines}${MAGENTA})$NC\n"; fi
 done
 
 printf "\n"
@@ -153,8 +166,8 @@ points=6
 for i in {1..3}
 do
 	printf " 500 numbers:"
-	numbers=$(seq -1000 1000 | shuf -n 500)
-	result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
+	numbers=$(jot 500 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 	
 	if [ "$result" = "OK" -a "$lines" -lt 11500 ]; then
 		printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC"
@@ -174,24 +187,22 @@ else printf "\n"; fi
 
 printf "$NC\n"
 printf " 1000 numbers:"
-numbers=$(seq -1000 1000 | shuf -n 1000)
-result=$(./push_swap $numbers | tee temp | ./checker_linux $numbers); lines=$(wc -l <temp); rm temp
+numbers=$(jot 1000 -1000 1000 | awk -v seed=$RANDOM 'BEGIN{srand(seed);}{print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+result=$(./push_swap $numbers | tee temp | $checker $numbers); lines=$(wc -l <temp | tr -d ' '); rm temp
 if [ "$result" = "OK" ]; then printf "$GREEN\tSUCCESS $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; else printf "$RED\tFAILURE $MAGENTA($YELLOW$lines$MAGENTA)$NC\n"; fi
 
-printf "$CYAN\n"
-numbers=$(seq 1 200 | shuf -n 100)
-memoryinfo=$(valgrind -s ./push_swap $numbers 2>&1 | awk '/HEAP SUMMARY/,/ERROR SUMMARY/' | sed 's/^==[0-9]*==//')
+if [ -f ~/.brew/bin/valgrind ]; then
+	printf "$NC\n"
+	numbers=$(jot 100 -1000 1000 | awk 'BEGIN{srand();} {print rand() "\t" $0}' | sort -n | cut -f2- | tr '\n' ' ')
+	memoryinfo=$(valgrind --show-error-list=no --leak-check=full ./push_swap $numbers 2>&1 | awk '/HEAP SUMMARY/,/ERROR SUMMARY/' | sed 's/^==[0-9]*==//')
 
-if [[ $memoryinfo == *"All heap blocks were freed -- no leaks are possible"* ]]; then
-    printf "\t\t\t$GREEN NO MEMORY LEAKS\n"
-else
-    printf "$CYAN$memoryinfo\n"
-	printf "\n\t\t\t$RED MEMORY LEAKS\n"
+	if [[ $memoryinfo == *"ERROR SUMMARY: 0 errors"* ]]; then
+    	printf "\t\t\t$GREEN NO MEMORY LEAKS\n"
+	else
+	#    printf "$CYAN$memoryinfo\n"
+    	printf "\n\t\t\t$RED MEMORY LEAKS\n"
+	fi
 fi
-printf "$YELLOW───────────────────────────────────────────────────────────────$NC\n"
-end=$(date +%s%N)
-printf "${CYAN}The test took $(awk -v d=$((end-start)) 'BEGIN {printf "%.2f", d / 1000000000}') seconds\n\n$NC"
 
-if [ -f "./checker" ]; then
-    ./ps_bonus_test.sh --std
-fi
+printf "${YELLOW}───────────────────────────────────────────────────────────────$NC\n\n"
+if [ -f "./checker" ]; then	./ps_btest.sh --std; fi
